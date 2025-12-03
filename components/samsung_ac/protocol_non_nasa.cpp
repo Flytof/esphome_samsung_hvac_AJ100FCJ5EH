@@ -111,7 +111,17 @@ namespace esphome
             str += "cmd:" + long_to_hex((uint8_t)cmd) + ";";
             switch (cmd)
             {
-            case NonNasaCommand::Cmd20:
+			case NonNasaCommand::Cmd23:
+			{
+			 	const auto &c23 = nonpacket_.command23;
+			 	const uint8_t p3 = c23.param3;
+  				// Quiet ON if 0x32 or 0x33, OFF if 0x00 (saw during the sniffs)
+  				// “33” not sure about 33 it can com from an other fonction
+				const bool quiet_on = (p3 == 0x32) || (p3 == 0x33);
+			  	target->set_altmode(nonpacket_.src, quiet_on ? 2 /*Quiet*/ : 0 /*None*/);
+			  	break;
+			}	
+			case NonNasaCommand::Cmd20:
             {
                 str += "command20:{" + command20.to_string() + "}";
                 break;
@@ -182,7 +192,16 @@ namespace esphome
             cmd = (NonNasaCommand)data[3];
             switch (cmd)
             {
-            case NonNasaCommand::Cmd20: // temperatures
+			case NonNasaCommand::Cmd23: // additional fonctions
+			{
+  			// Non-NASA “short” (14 bits)
+  			// data[0]=0x32, [1]=src, [2]=dst, [3]=cmd=0x23,
+  			// [4]=flags0, [5]=param3, [6..11]=réservé/0, [12]=crc, [13]=0x34
+ 			 	command23.flags0 = data[4];
+  				command23.param3 = data[5];
+			 	return DecodeResult::Ok;
+			}				
+			case NonNasaCommand::Cmd20: // temperatures
             {
                 command20.target_temp = data[4] - 55;
                 command20.room_temp = data[5] - 55;
@@ -595,8 +614,6 @@ namespace esphome
 				   target->set_water_heater_mode(nonpacket_.src, nonnasa_water_heater_mode_to_mode(-0));
                    target->set_fanmode(nonpacket_.src, nonnasa_fanspeed_to_fanmode(nonpacket_.command20.fanspeed));
                    // TODO
-                   target->set_altmode(nonpacket_.src, 0);
-                   // TODO
                    target->set_swing_horizontal(nonpacket_.src, false);
                    target->set_swing_vertical(nonpacket_.src, false);
                 }
@@ -689,3 +706,4 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
