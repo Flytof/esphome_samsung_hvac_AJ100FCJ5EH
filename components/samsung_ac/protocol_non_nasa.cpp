@@ -28,6 +28,54 @@ namespace esphome
             }
             return sum;
         }
+		// >>> BEGIN QUIET CMD23 HELPERS (extensible)
+		// État extensible des fonctions “cmd23” : Quiet, VirusDoctor, AutoClean, Comfort, etc.
+		struct Cmd23State {
+			bool quiet        = false;
+			bool virus_doctor = false;
+ 			bool auto_clean   = false;
+ 			bool comfort      = false;
+	  	// Tu pourras ajouter d’autres flags ici si nécessaire
+		};
+
+		// Encodage flags0 / param3 à partir de l’état (VERSION 1 : Quiet uniquement ; extensible)
+		static inline void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3) {
+ 		 // Par défaut : tout à OFF
+			flags0 = 0x00;
+ 			param3 = 0x00;
+
+		  // Quiet ON observé dans les sniffs : param3 = 0x32 (ou 0x33 selon l’UI)
+		if (st.quiet) {
+    		param3 = 0x32;  // On commence avec 0x32. Si besoin on ajoutera 0x33 après tests.
+ 		}
+
+		  // TODO (futurs ajouts):
+		  // if (st.virus_doctor) { param3 |= ...; }
+		  // if (st.auto_clean)   { param3 |= ...; }
+		  // if (st.comfort)      { param3  = ...; } // si comfort remplace param3
+		}
+
+		// Construction d’un paquet Non-NASA cmd:23 (14 octets)
+		static std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
+  			uint8_t flags0 = 0, param3 = 0;
+  			encode_cmd23_state(st, flags0, param3);
+
+  		std::vector<uint8_t> msg{
+     		0x32,       // start
+			0xD0,       // src = contrôleur (notre passerelle)
+			dst,        // dst = unité intérieure (ex: 0x01)
+    		0x23,       // cmd
+    		flags0,     // payload[0]
+    		param3,     // payload[1]
+    		0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // réserve
+   		 	0x00,       // crc (placeholder)
+    		0x34        // end
+  		};
+
+  		msg[12] = build_checksum(msg);
+  		return msg;
+		}
+		// <<< END QUIET CMD23 HELPERS
 
         std::string NonNasaCommand20::to_string()
         {
@@ -706,4 +754,5 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
