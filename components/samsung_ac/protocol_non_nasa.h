@@ -36,6 +36,18 @@ namespace esphome
             FourWay = 28,
             Stop = 31
         };
+        // Add new command 23
+        struct NonNasaCommand23
+        {
+          uint8_t flags0 = 0x00;
+          uint8_t param3 = 0x00;
+
+          std::string to_string() const {
+            char buf[64];
+            sprintf(buf, "{flags0:%u; param3:0x%02x}", (unsigned)flags0, (unsigned)param3);
+            return std::string(buf);
+          }
+        };
 
         struct NonNasaCommand20 // from indoor units
         {
@@ -134,6 +146,7 @@ namespace esphome
 
         enum class NonNasaCommand : uint8_t
         {
+            Cmd23 = 0x23,
             Cmd20 = 0x20,
             Cmd54 = 0x54,
             CmdC0 = 0xc0,
@@ -158,6 +171,7 @@ namespace esphome
 
             union
             {
+                NonNasaCommand23 command23;
                 NonNasaCommand20 command20;
                 NonNasaCommandRaw command54; // Control message ack
                 NonNasaCommandC0 commandC0;
@@ -216,3 +230,4 @@ namespace esphome
         };
     } // namespace samsung_ac
 } // namespace esphome
+
