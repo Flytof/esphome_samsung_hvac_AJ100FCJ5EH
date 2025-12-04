@@ -356,20 +356,23 @@ namespace esphome
         }
 
         uint8_t encode_request_fanspeed(NonNasaFanspeed value)
+    		// Bits 0..4 = target_temp (0..31)
+    		// Bits 5..6 = fan speed request (00,01,10,11)
+    		// Bit 7 not used here
         {
             switch (value)
             {
             case NonNasaFanspeed::Auto:
-                return 0;
+                return 0x00; // 00 << 5
             case NonNasaFanspeed::Low:
-                return 64;
+                return 0x20; // 01 << 5
             case NonNasaFanspeed::Medium:
-                return 128;
+                return 0x40; // 10 << 5
+            case NonNasaFanspeed::High: 	// "Fresh" is handled as High in the request
             case NonNasaFanspeed::Fresh:
-            case NonNasaFanspeed::High:
-                return 160;
+                return 0x60; // 11 << 5
             default:
-                return 0; // Auto
+                return 0x00; // Auto par défaut
             }
         }
 
@@ -765,6 +768,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
