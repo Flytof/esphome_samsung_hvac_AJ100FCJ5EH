@@ -161,12 +161,9 @@ namespace esphome
             {
 			case NonNasaCommand::Cmd23:
 			{
-			 	const auto &c23 = nonpacket_.command23;
-			 	const uint8_t p3 = c23.param3;
-  				// Quiet ON if 0x32 or 0x33, OFF if 0x00 (saw during the sniffs)
-  				// “33” not sure about 33 it can com from an other fonction
-				const bool quiet_on = (p3 == 0x32) || (p3 == 0x33);
-			  	target->set_altmode(nonpacket_.src, quiet_on ? 2 /*Quiet*/ : 0 /*None*/);
+    			// to_string() ne doit JAMAIS modifier l'état ni appeler target->...
+    			// On formate uniquement le contenu de command23.
+    			str += "command23:{" + command23.to_string() + "}";
 			  	break;
 			}	
 			case NonNasaCommand::Cmd20:
@@ -768,6 +765,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
