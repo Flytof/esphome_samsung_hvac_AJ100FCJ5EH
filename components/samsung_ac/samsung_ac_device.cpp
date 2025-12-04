@@ -14,7 +14,7 @@ namespace esphome
     {
       climate::ClimateTraits traits;
 
-      traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
+      traits.set_supports_current_temperature(true);
 
       traits.set_visual_temperature_step(1);
       traits.set_visual_min_temperature(16);
@@ -33,36 +33,37 @@ namespace esphome
                                       climate::CLIMATE_FAN_AUTO});
 
       {
-        static const char *CUSTOM_FAN_MODES[] = {"Turbo"};
-        traits.set_supported_custom_fan_modes(CUSTOM_FAN_MODES);
+        traits.set_supported_custom_fan_modes(std::set<std::string>{"Turbo"});
       }
 
       {
         auto supported = device->get_supported_alt_modes();
         if (!supported->empty())
         {
-          std::vector<const char *> custom_presets;
-
-          for (const AltModeDesc &mode : *supported)
+        auto supported = device->get_supported_alt_modes();
+        if (supported && !supported->empty())
           {
-            auto preset = altmodename_to_preset(mode.name);
-            if (preset.has_value())
+            std::set<std::string> custom_presets;
+
+            for (const AltModeDesc &mode : *supported)
             {
-              traits.add_supported_preset(preset.value());
+              auto preset = altmodename_to_preset(mode.name);
+              if (preset.has_value())
+              {
+                traits.add_supported_preset(preset.value());
+              }
+              else
+              {
+                custom_presets.insert(mode.name.c_str());
+              }
             }
-            else
+
+            if (!custom_presets.empty())
             {
-              custom_presets.push_back(mode.name.c_str());
+              traits.set_supported_custom_presets(custom_presets);
             }
           }
-
-          if (!custom_presets.empty())
-          {
-            traits.set_supported_custom_presets(custom_presets);
-          }
-        }
-      }
-
+         }
       {
         bool h = device->supports_horizontal_swing();
         bool v = device->supports_vertical_swing();
@@ -108,15 +109,15 @@ namespace esphome
       }
 
       auto fanmodeOpt = call.get_fan_mode();
-      const char *custom_fan = call.get_custom_fan_mode();
+      auto custom_fan = call.get_custom_fan_mode();  // optional<std::string>
 
       if (fanmodeOpt.has_value())
       {
         request.fan_mode = climatefanmode_to_fanmode(fanmodeOpt.value());
       }
-      else if (custom_fan != nullptr && custom_fan[0] != '\0')
+      else if (custom_fan.has_value() && !custom_fan->empty())
       {
-        request.fan_mode = customfanmode_to_fanmode(custom_fan);
+        request.fan_mode = customfanmode_to_fanmode(custom_fan->c_str());
       }
       else if (mode_changed)
       {
@@ -129,10 +130,10 @@ namespace esphome
         set_alt_mode_by_name(request, preset_to_altmodename(presetOpt.value()));
       }
 
-      const char *custom_preset = call.get_custom_preset();
-      if (custom_preset != nullptr && custom_preset[0] != '\0')
+      auto custom_preset = call.get_custom_preset();  // optional<std::string>
+      if (custom_preset.has_value() && !custom_preset->empty())
       {
-        set_alt_mode_by_name(request, AltModeName(custom_preset));
+        set_alt_mode_by_name(request, AltModeName(custom_preset->c_str()));
       }
 
       auto swingModeOpt = call.get_swing_mode();
@@ -163,11 +164,11 @@ namespace esphome
       if (fanmode.has_value())
       {
         this->set_fan_mode_(*fanmode);
-        this->clear_custom_fan_mode_();
+        this->set_custom_fan_mode_("");
       }
       else
       {
-        this->clear_custom_fan_mode_();
+        this->set_custom_fan_mode_("");
 
         std::string custom = fanmode_to_custom_climatefanmode(value);
         if (!custom.empty())
@@ -183,14 +184,15 @@ namespace esphome
       if (preset.has_value())
       {
         this->set_preset_(*preset);
-        this->clear_custom_preset_();
+        this->set_custom_preset_("");
       }
       else
       {
-        this->clear_custom_preset_();
+        this->set_custom_preset_("");
         this->set_custom_preset_(mode.name.c_str());
       }
     }
 
   } // namespace samsung_ac
 } // namespace esphome
+
