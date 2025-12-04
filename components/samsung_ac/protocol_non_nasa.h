@@ -158,8 +158,8 @@ namespace esphome
 
         enum class NonNasaCommand : uint8_t
         {
-            Cmd23 = 0x23,
             Cmd20 = 0x20,
+            Cmd23 = 0x23,
             Cmd54 = 0x54,
             CmdC0 = 0xc0,
             CmdC1 = 0xc1,
@@ -183,7 +183,6 @@ namespace esphome
 
             union
             {
-                NonNasaCommand23 command23;
                 NonNasaCommand20 command20;
                 NonNasaCommandRaw command54; // Control message ack
                 NonNasaCommandC0 commandC0;
@@ -192,6 +191,7 @@ namespace esphome
                 NonNasaCommandF0 commandF0;
                 NonNasaCommandF1 commandF1;
                 NonNasaCommandF3 commandF3;
+                NonNasaCommand23 command23;
                 NonNasaCommandRaw commandF8; // Unknown structure for now
                 NonNasaCommandRaw commandRaw;
             };
@@ -242,6 +242,7 @@ namespace esphome
         };
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
