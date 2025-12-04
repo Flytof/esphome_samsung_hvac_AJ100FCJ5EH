@@ -484,7 +484,15 @@ namespace esphome
 
             if (request.alt_mode)
             {
-                ESP_LOGW(TAG, "change altmode is currently not implemented");
+                // 2 = Quiet (cf. PRESETS dans __init__.py)
+  				const bool quiet_on = (request.alt_mode.value() == 2);
+
+  				Cmd23State st;
+  				st.quiet = quiet_on;
+
+  				const uint8_t dst = hex_to_int(address);   // ex. "01" -> 0x01
+  				auto msg = build_cmd23_packet(dst, st);
+  				target->publish_data(msg);
             }
 
             if (request.swing_mode)
@@ -666,7 +674,13 @@ namespace esphome
                    target->set_swing_vertical(nonpacket_.src, false);
                 }
             }
-            else if (nonpacket_.cmd == NonNasaCommand::CmdC6)
+			else if (nonpacket_.cmd == NonNasaCommand::Cmd23)
+			{	
+				const auto p3 = nonpacket_.command23.param3;
+    			const bool quiet_on = (p3 == 0x32) || (p3 == 0x33);
+    			target->set_altmode(nonpacket_.src, quiet_on ? 2 /* Quiet */ : 0 /* None */);
+			}
+			else if (nonpacket_.cmd == NonNasaCommand::CmdC6)
             {
                 // We have received a request_control message. This is a message outdoor units will
                 // send to a registered controller, allowing us to reply with any control commands.
@@ -754,5 +768,6 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
