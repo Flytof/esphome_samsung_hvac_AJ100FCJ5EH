@@ -30,15 +30,11 @@ namespace esphome
         }
 
 		// Encodage (ancienne génération) : Quiet = bit5 de flags0 (0x20), param3 reste 0x00
-		inline void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3) {
+		static void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3) {
   			flags0 = 0x00;
-  			param3 = 0x00;
-
-  		if (st.quiet) {
-    		flags0 |= 0x20;   // Quiet ON (bit5)
+			// Quiet ON = 0x32 ; Quiet OFF = 0x30 (si OFF ne réagit pas, on testera 0x00)
+  			param3 = st.quiet ? 0x32 : 0x30;
   		}
-  		// Quiet OFF = flags0=0x00, param3=0x00
-
   		// TODO (futurs ajouts):
   		// if (st.virus_doctor) { param3 |= ...; }
   		// if (st.auto_clean)   { param3 |= ...; }
@@ -49,7 +45,9 @@ namespace esphome
 		std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
   			uint8_t flags0 = 0, param3 = 0;
   			encode_cmd23_state(st, flags0, param3);
-
+		ESP_LOGW(TAG, "SEND CMD23 dst=%02x flags0=0x%02X param3=0x%02X (quiet=%d)",
+         dst, flags0, param3, st.quiet ? 1 : 0);
+			
   		std::vector<uint8_t> msg{
      		0x32,       // start
 			0xD0,       // src = contrôleur (notre passerelle)
@@ -764,6 +762,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
