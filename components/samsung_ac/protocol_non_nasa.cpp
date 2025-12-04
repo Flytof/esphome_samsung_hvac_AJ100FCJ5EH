@@ -66,12 +66,6 @@ namespace esphome
   		return msg;
 		}
 		// <<< END QUIET CMD23 HELPERS
-
-		std::string NonNasaCommand23::to_string() const {
-  		// Simple dump des deux octets utiles que l’on lit
-  			return "flags0:" + long_to_hex(flags0) + "; param3:" + long_to_hex(param3);
-		}	
-
 			
         std::string NonNasaCommand20::to_string()
         {
@@ -770,6 +764,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
