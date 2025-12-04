@@ -122,35 +122,39 @@ namespace esphome
         FanMode auto_fan = climatefanmode_to_fanmode(climate::CLIMATE_FAN_AUTO);
         request.fan_mode = auto_fan;
       }
-     // --- PRESETS ---
+      // --- PRESETS ---
+
+      // 1) Preset natif HA : on force seulement le OFF explicite.
       auto presetOpt = call.get_preset();
-      if (presetOpt.has_value()) {
-      if (presetOpt.value() == climate::ClimatePreset::CLIMATE_PRESET_NONE)
+      if (presetOpt.has_value())
       {
-        request.alt_mode = 0;  // Quiet OFF
-        ESP_LOGW(TAG, "ALT preset NONE -> alt_mode=0");
-      }
-      else
-      {
+        if (presetOpt.value() == climate::ClimatePreset::CLIMATE_PRESET_NONE) {
+          request.alt_mode = 0;  // Quiet OFF
+          ESP_LOGW(TAG, "ALT preset NONE -> alt_mode=0");
+        }
+        else
+        {
         set_alt_mode_by_name(request, preset_to_altmodename(presetOpt.value()));
         ESP_LOGW(TAG, "ALT preset native mapped");
+        }
       }
-    }
 
-auto custom_preset = call.get_custom_preset();  // optional<std::string>
-if (custom_preset.has_value()) {
-  const std::string &cp = *custom_preset;
-  if (cp == "quiet" || cp == "Quiet" || cp == "QUIET") {
-    request.alt_mode = 2;   // Quiet ON
-    ESP_LOGW(TAG, "ALT custom 'quiet' -> alt_mode=2");
-  } else if (cp.empty() || cp == "none" || cp == "None" || cp == "NONE") {
-    request.alt_mode = 0;   // Quiet OFF
-    ESP_LOGW(TAG, "ALT custom none -> alt_mode=0");
-  } else {
-    set_alt_mode_by_name(request, AltModeName(cp.c_str()));
-    ESP_LOGW(TAG, "ALT custom '%s' mapped by name", cp.c_str());
-  }
-}
+      // 2) Custom preset : ne gérer que "quiet" ON/OFF pour l’instant.
+      auto custom_preset = call.get_custom_preset();  // optional<std::string>
+      if (custom_preset.has_value()) {
+        const std::string &cp = *custom_preset;
+      if (cp == "quiet" || cp == "Quiet" || cp == "QUIET")
+      {
+        request.alt_mode = 2;   // Quiet ON -> cmd:23
+        ESP_LOGW(TAG, "ALT custom 'quiet' -> alt_mode=2");
+      }
+      else if (cp.empty() || cp == "none" || cp == "None" || cp == "NONE")
+      {
+        request.alt_mode = 0;   // Quiet OFF -> cmd:23 OFF
+        ESP_LOGW(TAG, "ALT custom 'none' -> alt_mode=0");
+      }
+      // (pas d'autre mapping custom pour le moment)
+    }
       auto swingModeOpt = call.get_swing_mode();
       if (swingModeOpt.has_value())
       {
@@ -210,6 +214,7 @@ if (custom_preset.has_value()) {
 
   } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
