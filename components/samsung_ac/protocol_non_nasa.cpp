@@ -397,7 +397,7 @@ namespace esphome
 
             // individual seems to deactivate the locale remotes with message "CENTRAL".
             // seems to be like a building management system.
-            bool individual = false;
+            bool individual = true;
 
             if (room_temp > 0)
                 data[5] = room_temp;
@@ -768,6 +768,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
