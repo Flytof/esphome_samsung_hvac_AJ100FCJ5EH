@@ -10,6 +10,17 @@ namespace esphome
 {
     namespace samsung_ac
     {
+        // ---- CMD23 helpers (déclaration) ----
+        struct Cmd23State {
+            bool quiet        = false;
+            bool virus_doctor = false;
+            bool auto_clean   = false;
+            bool comfort      = false;
+            };
+
+        void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3);
+        std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st);
+
         enum class NonNasaFanspeed : uint8_t
         {
             Auto = 0,
@@ -230,4 +241,5 @@ namespace esphome
         };
     } // namespace samsung_ac
 } // namespace esphome
+
 
