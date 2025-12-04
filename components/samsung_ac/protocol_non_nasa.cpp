@@ -67,7 +67,7 @@ namespace esphome
 		}
 		// <<< END QUIET CMD23 HELPERS
 
-		std::string NonNasaCommand23::to_string() {
+		std::string NonNasaCommand23::to_string() const {
   		// Simple dump des deux octets utiles que l’on lit
   			return "flags0:" + long_to_hex(flags0) + "; param3:" + long_to_hex(param3);
 		}	
@@ -101,7 +101,7 @@ namespace esphome
             return str;
         }
 
-        std::string NonNasaCommandC1::to_string() const 
+        std::string NonNasaCommandC1::to_string()
         {
             std::string str;
             str += "ou_sump_temp[°C]:" + std::to_string(outdoor_unit_sump_temp_c);
@@ -770,6 +770,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
