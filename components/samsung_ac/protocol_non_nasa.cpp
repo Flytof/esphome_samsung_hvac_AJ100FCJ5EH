@@ -38,16 +38,16 @@ namespace esphome
 	  	// Tu pourras ajouter d’autres flags ici si nécessaire
 		};
 
-		// Encodage flags0 / param3 à partir de l’état (VERSION 1 : Quiet uniquement ; extensible)
+		// Encodage (ancienne génération) : Quiet = bit5 de flags0 (0x20), param3 reste 0x00
 		static inline void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3) {
- 		 // Par défaut : tout à OFF
-			flags0 = 0x00;
- 			param3 = 0x00;
+  			flags0 = 0x00;
+  			param3 = 0x00;
 
-		  // Quiet ON observé dans les sniffs : param3 = 0x32 (ou 0x33 selon l’UI)
-		if (st.quiet) {
-    		param3 = 0x32;  // On commence avec 0x32. Si besoin on ajoutera 0x33 après tests.
- 		}
+  			if (st.quiet) {
+    		flags0 |= 0x20;   // Quiet ON
+  		}
+  		// Quiet OFF = flags0=0x00, param3=0x00
+		}
 
 		  // TODO (futurs ajouts):
 		  // if (st.virus_doctor) { param3 |= ...; }
@@ -492,7 +492,11 @@ namespace esphome
 
   				const uint8_t dst = hex_to_int(address);   // ex. "01" -> 0x01
   				auto msg = build_cmd23_packet(dst, st);
-  				target->publish_data(msg);
+				// >>> LOG ajouté pour tracer l’envoi du CMD23 Quiet
+  				ESP_LOGW(TAG, "SEND CMD23 dst=%02x quiet=%d (flags0 via 0x20)", dst, (int)quiet_on);
+  				// <<<
+				
+				target->publish_data(msg);
             }
 
             if (request.swing_mode)
@@ -768,6 +772,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
