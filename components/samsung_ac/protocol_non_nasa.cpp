@@ -295,17 +295,12 @@ namespace esphome
         {
             switch (value)
             {
-            case NonNasaFanspeed::Auto:
-                return 0;
-            case NonNasaFanspeed::Low:
-                return 64;
-            case NonNasaFanspeed::Medium:
-                return 128;
-            case NonNasaFanspeed::Fresh:
-            case NonNasaFanspeed::High:
-                return 160;
-            default:
-                return 0; // Auto
+            case NonNasaFanspeed::Auto:   return 0x00; // 00 << 5
+    		case NonNasaFanspeed::Low:    return 0x20; // 01 << 5
+   		 	case NonNasaFanspeed::Medium: return 0x40; // 10 << 5
+    		case NonNasaFanspeed::High:
+    		case NonNasaFanspeed::Fresh:  return 0x60; // 11 << 5
+    		default:                      return 0x00;
             }
         }
 
@@ -689,3 +684,4 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
