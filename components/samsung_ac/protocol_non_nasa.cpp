@@ -33,7 +33,7 @@ namespace esphome
         }
 
 		// Encodage (ancienne génération) : Quiet = bit5 de flags0 (0x20), param3 reste 0x00
-		static void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3) {
+		void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3) {
   			flags0 = 0x00;
 			// Quiet ON = 0x32 ; Quiet OFF = 0x30 (si OFF ne réagit pas, on testera 0x00)
   			param3 = st.quiet ? 0x32 : 0x30;
@@ -771,6 +771,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
