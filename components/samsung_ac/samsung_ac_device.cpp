@@ -37,34 +37,37 @@ namespace esphome
       }
 
       {
-        auto supported = device->get_supported_alt_modes();
-        if (!supported->empty())
+      auto supported = device->get_supported_alt_modes();
+      if (supported && !supported->empty())
         {
-        auto supported = device->get_supported_alt_modes();
-        if (supported && !supported->empty())
-          {
-            std::set<std::string> custom_presets;
+        std::set<std::string> custom_presets;
 
-            for (const AltModeDesc &mode : *supported)
-            {
-              auto preset = altmodename_to_preset(mode.name);
-              if (preset.has_value())
-              {
-                traits.add_supported_preset(preset.value());
-              }
-              else
-              {
-                custom_presets.insert(mode.name.c_str());
-              }
-            }
+        for (const AltModeDesc &mode : *supported) {
+          auto preset = altmodename_to_preset(mode.name);
+          if (preset.has_value()) {
+              traits.add_supported_preset(preset.value());
+        }
+        else
+        {
+        custom_presets.insert(mode.name.c_str());
+        }
+      }
 
-            if (!custom_presets.empty())
-            {
-              traits.set_supported_custom_presets(custom_presets);
-            }
-          }
-         }
-      {
+        if (!custom_presets.empty())
+        {
+          traits.set_supported_custom_presets(custom_presets);
+        }
+      }
+    }
+
+        //  Forcer l'exposition du custom preset "quiet"
+        // (utile si l'unité n'annonce pas "quiet" dans supported_alt_modes)
+        {
+        auto pres = traits.get_supported_custom_presets();  // set<string> (peut être vide)
+        pres.insert("quiet");
+        traits.set_supported_custom_presets(pres);
+        }
+        {
         bool h = device->supports_horizontal_swing();
         bool v = device->supports_vertical_swing();
 
@@ -195,4 +198,5 @@ namespace esphome
 
   } // namespace samsung_ac
 } // namespace esphome
+
 
