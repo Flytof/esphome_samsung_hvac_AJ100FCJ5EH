@@ -6,6 +6,9 @@
 #include "esphome/core/hal.h"
 #include "util.h"
 #include "protocol_non_nasa.h"
+#include <optional>
+static std::optional<std::vector<uint8_t>> g_pending_cmd23;
+
 
 std::map<std::string, esphome::samsung_ac::NonNasaCommand20> last_command20s_;
 
@@ -484,7 +487,7 @@ namespace esphome
   				ESP_LOGW(TAG, "SEND CMD23 dst=%02x quiet=%d (flags0 via 0x20)", dst, (int)quiet_on);
   				// <<<
 				
-				target->publish_data(msg);
+				g_pending_cmd23 = msg;   // on l’enverra pendant la fenêtre C6
             }
 
             if (request.swing_mode)
@@ -688,6 +691,12 @@ namespace esphome
                     }
                     if (indoor_unit_awake)
                     {
+						      if (g_pending_cmd23.has_value())
+							  	{
+        						ESP_LOGW(TAG, "SENDING pending CMD23 in C6 window");
+        						target->publish_data(*g_pending_cmd23);
+        						g_pending_cmd23.reset();
+      							}
                         // We know the outdoor unit is awake due to this request_control message, so we only
                         // need to check that the indoor unit is awake.
                         send_requests(target);
@@ -762,6 +771,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
