@@ -28,35 +28,25 @@ namespace esphome
             }
             return sum;
         }
-		// >>> BEGIN QUIET CMD23 HELPERS (extensible)
-		// État extensible des fonctions “cmd23” : Quiet, VirusDoctor, AutoClean, Comfort, etc.
-		struct Cmd23State {
-			bool quiet        = false;
-			bool virus_doctor = false;
- 			bool auto_clean   = false;
- 			bool comfort      = false;
-	  	// Tu pourras ajouter d’autres flags ici si nécessaire
-		};
 
 		// Encodage (ancienne génération) : Quiet = bit5 de flags0 (0x20), param3 reste 0x00
-		static inline void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3) {
+		inline void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3) {
   			flags0 = 0x00;
   			param3 = 0x00;
 
-  			if (st.quiet) {
-    		flags0 |= 0x20;   // Quiet ON
+  		if (st.quiet) {
+    		flags0 |= 0x20;   // Quiet ON (bit5)
   		}
   		// Quiet OFF = flags0=0x00, param3=0x00
-		}
 
-		  // TODO (futurs ajouts):
-		  // if (st.virus_doctor) { param3 |= ...; }
-		  // if (st.auto_clean)   { param3 |= ...; }
-		  // if (st.comfort)      { param3  = ...; } // si comfort remplace param3
-		}
+  		// TODO (futurs ajouts):
+  		// if (st.virus_doctor) { param3 |= ...; }
+  		// if (st.auto_clean)   { param3 |= ...; }
+  		// if (st.comfort)      { param3  = ...; }
+	}
 
 		// Construction d’un paquet Non-NASA cmd:23 (14 octets)
-		static std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
+		std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
   			uint8_t flags0 = 0, param3 = 0;
   			encode_cmd23_state(st, flags0, param3);
 
@@ -77,6 +67,12 @@ namespace esphome
 		}
 		// <<< END QUIET CMD23 HELPERS
 
+		std::string NonNasaCommand23::to_string() {
+  		// Simple dump des deux octets utiles que l’on lit
+  			return "flags0:" + long_to_hex(flags0) + "; param3:" + long_to_hex(param3);
+		}	
+
+			
         std::string NonNasaCommand20::to_string()
         {
             std::string str;
@@ -679,10 +675,12 @@ namespace esphome
                 }
             }
 			else if (nonpacket_.cmd == NonNasaCommand::Cmd23)
-			{	
-				const auto p3 = nonpacket_.command23.param3;
-    			const bool quiet_on = (p3 == 0x32) || (p3 == 0x33);
-    			target->set_altmode(nonpacket_.src, quiet_on ? 2 /* Quiet */ : 0 /* None */);
+			{
+  				const uint8_t f0 = nonpacket_.command23.flags0;
+  				const bool quiet_on = (f0 & 0x20) != 0;   // bit5
+  				ESP_LOGW(TAG, "RECV CMD23 src=%s flags0=0x%02x param3=0x%02x -> quiet=%d",
+           				nonpacket_.src.c_str(), f0, nonpacket_.command23.param3, (int)quiet_on);
+  				target->set_altmode(nonpacket_.src, quiet_on ? 2 /* Quiet */ : 0 /* None */);
 			}
 			else if (nonpacket_.cmd == NonNasaCommand::CmdC6)
             {
@@ -772,6 +770,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
