@@ -5,6 +5,7 @@
 #include <optional>
 #include "protocol.h"
 #include "util.h"
+#include <cstdio>
 
 namespace esphome
 {
@@ -55,7 +56,7 @@ namespace esphome
 
           std::string to_string() const {
             char buf[64];
-            sprintf(buf, "{flags0:%u; param3:0x%02x}", (unsigned)flags0, (unsigned)param3);
+            std::snprintf(buf, sizeof(buf), "{flags0:0x%02X; param3:0x%02X}", (unsigned)flags0, (unsigned)param3);
             return std::string(buf);
           }
         };
@@ -241,5 +242,6 @@ namespace esphome
         };
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
