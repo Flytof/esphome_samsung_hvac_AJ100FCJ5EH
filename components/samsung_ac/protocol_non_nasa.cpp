@@ -101,7 +101,7 @@ namespace esphome
             return str;
         }
 
-        std::string NonNasaCommandC1::to_string()
+        std::string NonNasaCommandC1::to_string() const 
         {
             std::string str;
             str += "ou_sump_temp[°C]:" + std::to_string(outdoor_unit_sump_temp_c);
@@ -770,6 +770,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
