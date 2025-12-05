@@ -43,14 +43,16 @@ void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3)
 }
 
 // Construction d’un paquet Non-NASA cmd:23 (14 octets)
-std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
+// NOTE: on paramètre maintenant AUSSI le SRC pour pouvoir "spoof" l'UI.
+std::vector<uint8_t> build_cmd23_packet(uint8_t src, uint8_t dst, const Cmd23State &st) {
   uint8_t flags0 = 0, param3 = 0;
   encode_cmd23_state(st, flags0, param3);
-  ESP_LOGW(TAG, "SEND CMD23 dst=%02x flags0=0x%02X param3=0x%02X (quiet=%d)",
-           dst, flags0, param3, st.quiet ? 1 : 0);
+
+  ESP_LOGW(TAG, "SEND CMD23 src=%02x dst=%02x flags0=0x%02X param3=0x%02X (quiet=%d)",
+           src, dst, flags0, param3, st.quiet ? 1 : 0);
 
   std::vector<uint8_t> msg{
-    0x32, 0xD0, dst, 0x23,
+    0x32, src, dst, 0x23,
     flags0, param3,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x34
@@ -464,21 +466,35 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
                 req.fanspeed = fanmode_to_nonnasa_fanspeed(request.fan_mode.value());
 
             if (request.alt_mode)
-            {
-                // 2 = Quiet (cf. PRESETS dans __init__.py)
+			{
+  				// 2 = Quiet (cf. PRESETS dans __init__.py)
   				const bool quiet_on = (request.alt_mode.value() == 2);
 
   				Cmd23State st;
   				st.quiet = quiet_on;
 
-  				const uint8_t dst = hex_to_int(address);   // ex. "01" -> 0x01
-  				auto msg = build_cmd23_packet(dst, st);
-				// >>> LOG ajouté pour tracer l’envoi du CMD23 Quiet
-  				ESP_LOGW(TAG, "SEND CMD23 dst=%02x quiet=%d (flags0 via 0x20)", dst, (int)quiet_on);
-  				// <<<
-				
-				g_pending_cmd23 = msg;   // on l’enverra pendant la fenêtre C6
-            }
+  				const uint8_t indoor = hex_to_int(address);   // "04" -> 0x04 par ex.
+
+  				// --- IMPORTANT ---
+  				// Pour tes UI Non-NASA, on "émule" le flux observé sur le bus :
+  				//   UI -> (src = <indoor>) vers OU (dst = 0xC8), cmd 0x23
+  				// Donc on *spoofe* la source = l'UI concernée, et la destination = 0xC8.
+  				const uint8_t spoof_src = indoor;
+  				const uint8_t spoof_dst = 0xC8;
+
+  				auto msg = build_cmd23_packet(spoof_src, spoof_dst, st);  // <-- NOUVEL APPEL
+
+  				ESP_LOGW(TAG, "QUEUE CMD23 (spoof as UI) src=%02x -> dst=%02x quiet=%d",
+           				spoof_src, spoof_dst, (int)quiet_on);
+
+  				g_pending_cmd23 = msg;                 // on l’enverra pendant la fenêtre C6
+  				// Et on force un "quiet" côté UI pour que HA reflète immédiatement l’état voulu.
+  				target->set_altmode(address, quiet_on ? 2 : 0);
+
+  				// ATTENTION : on ne pousse PAS d'ordre B0 sur la queue à ce tour.
+  				// (rien d'autre à faire ici)
+  				return;  // on sort tôt pour éviter d'empiler un B0 dans la foulée
+			}
 
             if (request.swing_mode)
             {
@@ -783,6 +799,7 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
