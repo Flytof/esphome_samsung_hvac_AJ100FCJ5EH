@@ -58,14 +58,6 @@ namespace esphome
       }
     }
 
-      // Forcer l'exposition du custom preset "quiet"
-      // (utile si l'unité n'annonce pas "quiet" dans supported_alt_modes)
-      {
-      auto pres = traits.get_supported_custom_presets();  // set<string> (peut être vide)
-      pres.insert("quiet");
-      traits.set_supported_custom_presets(pres);
-      }
-
       {
         bool h = device->supports_horizontal_swing();
         bool v = device->supports_vertical_swing();
@@ -218,6 +210,7 @@ namespace esphome
 
   } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
