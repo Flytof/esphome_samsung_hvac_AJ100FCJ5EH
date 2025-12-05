@@ -8,6 +8,7 @@
 #include "protocol_non_nasa.h"
 #include <optional>
 #include <list>
+#include <vector>
 
 
 namespace esphome
@@ -765,6 +766,7 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
