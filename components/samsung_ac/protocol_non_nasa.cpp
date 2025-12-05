@@ -7,22 +7,22 @@
 #include "util.h"
 #include "protocol_non_nasa.h"
 #include <optional>
+#include <list>
 
-
-std::map<std::string, esphome::samsung_ac::NonNasaCommand20> last_command20s_;
-
-esphome::samsung_ac::NonNasaDataPacket nonpacket_;
 
 namespace esphome
 {
     namespace samsung_ac
+	{
     static std::optional<std::vector<uint8_t>> g_pending_cmd23;
-    {
-        std::list<NonNasaRequestQueueItem> nonnasa_requests;
-        bool controller_registered = false;
-        bool indoor_unit_awake = true;
+    std::list<NonNasaRequestQueueItem> nonnasa_requests;
+    bool controller_registered = false;
+    bool indoor_unit_awake = true;
 
-        uint8_t build_checksum(std::vector<uint8_t> &data)
+	std::map<std::string, esphome::samsung_ac::NonNasaCommand20> last_command20s_;
+	esphome::samsung_ac::NonNasaDataPacket nonpacket_;
+
+        uint8_t build_checksum(const std::vector<uint8_t> &data)
         {
             uint8_t sum = data[1];
             for (uint8_t i = 2; i < 12; i++)
@@ -33,39 +33,28 @@ namespace esphome
         }
 
 		// Encodage (ancienne génération) : Quiet = bit5 de flags0 (0x20), param3 reste 0x00
-		void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3)
-		{
-  			flags0 = 0x00;
-			// Quiet ON = 0x32 ; Quiet OFF = 0x30 (si OFF ne réagit pas, on testera 0x00)
-  			param3 = st.quiet ? 0x32 : 0x30;
-  		}
-  		// if (st.virus_doctor) { param3 |= ...; }
-  		// if (st.auto_clean)   { param3 |= ...; }
-  		// if (st.comfort)      { param3  = ...; }
-	}
+void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3)
+{
+  flags0 = 0x00;
+  param3 = st.quiet ? 0x32 : 0x30;
+}
 
-		// Construction d’un paquet Non-NASA cmd:23 (14 octets)
-		std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
-  			uint8_t flags0 = 0, param3 = 0;
-  			encode_cmd23_state(st, flags0, param3);
-		ESP_LOGW(TAG, "SEND CMD23 dst=%02x flags0=0x%02X param3=0x%02X (quiet=%d)",
-         dst, flags0, param3, st.quiet ? 1 : 0);
-			
-  		std::vector<uint8_t> msg{
-     		0x32,       // start
-			0xD0,       // src = contrôleur (notre passerelle)
-			dst,        // dst = unité intérieure (ex: 0x01)
-    		0x23,       // cmd
-    		flags0,     // payload[0]
-    		param3,     // payload[1]
-    		0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // réserve
-   		 	0x00,       // crc (placeholder)
-    		0x34        // end
-  		};
+// Construction d’un paquet Non-NASA cmd:23 (14 octets)
+std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
+  uint8_t flags0 = 0, param3 = 0;
+  encode_cmd23_state(st, flags0, param3);
+  ESP_LOGW(TAG, "SEND CMD23 dst=%02x flags0=0x%02X param3=0x%02X (quiet=%d)",
+           dst, flags0, param3, st.quiet ? 1 : 0);
 
-  		msg[12] = build_checksum(msg);
-  		return msg;
-		}
+  std::vector<uint8_t> msg{
+    0x32, 0xD0, dst, 0x23,
+    flags0, param3,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x34
+  };
+  msg[12] = build_checksum(msg);
+  return msg;
+}
 		// <<< END QUIET CMD23 HELPERS
 			
         std::string NonNasaCommand20::to_string()
@@ -677,8 +666,8 @@ namespace esphome
     		// Quiet vu à l’IR : param3 = 0x32 (ON) / 0x30 (OFF)
     			const bool quiet_on = (p3 == 0x32) || (p3 == 0x33);
 
-    			SP_LOGW(TAG, "RECV CMD23 src=%s flags0=0x%02x param3=0x%02x -> quiet=%d",
-             	nonpacket_.src.c_str(), f0, p3, (int)quiet_on);
+    			ESP_LOGW(TAG, "RECV CMD23 src=%s flags0=0x%02x param3=0x%02x -> quiet=%d",
+         		nonpacket_.src.c_str(), f0, p3, (int)quiet_on);
 
     			target->set_altmode(nonpacket_.src, quiet_on ? 2 /* Quiet */ : 0 /* None */);
 			}
@@ -776,6 +765,7 @@ namespace esphome
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
