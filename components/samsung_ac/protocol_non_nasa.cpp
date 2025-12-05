@@ -673,39 +673,47 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
     			target->set_altmode(nonpacket_.src, quiet_on ? 2 /* Quiet */ : 0 /* None */);
 			}
 			else if (nonpacket_.cmd == NonNasaCommand::CmdC6)
-            {
-                // We have received a request_control message. This is a message outdoor units will
-                // send to a registered controller, allowing us to reply with any control commands.
-                // Control commands should be sent immediately (per SNET Pro behaviour).
-                if (nonpacket_.src == "c8" && nonpacket_.dst == "d0" && nonpacket_.commandC6.control_status == true)
-                {
-                    if (controller_registered == false)
-                    {
-                        ESP_LOGD(TAG, "Controller registered");
-                        controller_registered = true;
-                    }
-                    if (g_pending_cmd23.has_value())
-    				{
-        				ESP_LOGW(TAG, "SENDING pending CMD23 in C6 window");
-        				target->publish_data(*g_pending_cmd23);
-        				g_pending_cmd23.reset();
+			{
+    		// We have received a request_control message...
+    			if (nonpacket_.src == "c8" && nonpacket_.dst == "d0" && nonpacket_.commandC6.control_status == true)
+    			{
+        			if (controller_registered == false)
+        			{
+            		ESP_LOGD(TAG, "Controller registered");
+            		controller_registered = true;
+        			}
 
-        				suppress_queue_once = true;   // on saute la queue pour CE poll
-        				sent_anything = true;
-    				}
-					if (!sent_anything)
-    				{
-        				if (suppress_queue_once)
-        				{
-            			ESP_LOGD(TAG, "Skipping queue on this C6 (Cmd23 was just sent previously)");
-            			suppress_queue_once = false;   // on consomme le "joker" : ne saute qu'une fois
-        				}
-        				else
-        				{
-            			send_requests(target);         // envoi normal de la file d'attente
-        				}
-                }
-            }
+        		if (indoor_unit_awake)
+        		{
+            		bool sent_anything = false;  // <<< AJOUT ICI
+
+            		// 1) Priorité : envoyer un éventuel CMD23
+            		if (g_pending_cmd23.has_value())
+            		{
+                		ESP_LOGW(TAG, "SENDING pending CMD23 in C6 window");
+                		target->publish_data(*g_pending_cmd23);
+                		g_pending_cmd23.reset();
+
+                		suppress_queue_once = true;   // bloquer la file pour CE poll
+                		sent_anything = true;
+            		}
+
+            		// 2) Sinon, gérer la file
+            		if (!sent_anything)
+            		{
+                		if (suppress_queue_once)
+                		{
+                    		ESP_LOGD(TAG, "Skipping queue on this C6 (Cmd23 was just sent previously)");
+                    		suppress_queue_once = false;  // on “consomme” le joker
+                		}
+                			else
+                			{
+                    			send_requests(target);
+                			}
+            			}
+        			}
+    			}
+			}
             else if (nonpacket_.cmd == NonNasaCommand::Cmd54 && nonpacket_.dst == "d0")
             {
                 // We have received a control_acknowledgement message. This message will come from an
@@ -774,6 +782,7 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
