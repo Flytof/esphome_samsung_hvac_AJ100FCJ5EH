@@ -38,8 +38,8 @@ namespace esphome
 		// Encodage (ancienne génération) : Quiet = bit5 de flags0 (0x20), param3 reste 0x00
 void encode_cmd23_state(const Cmd23State &st, uint8_t &flags0, uint8_t &param3)
 {
-  flags0 = 0x00;
-  param3 = st.quiet ? 0x32 : 0x30;
+  flags0 = st.quiet ? 0x20 : 0x00;  // ON -> bit5, OFF -> 0x00
+  param3 = 0x00;                    // vu au snif
 }
 
 // Construction d’un paquet Non-NASA cmd:23 (14 octets)
@@ -661,16 +661,17 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
             }
 			else if (nonpacket_.cmd == NonNasaCommand::Cmd23)
 			{
-    			const uint8_t f0 = nonpacket_.command23.flags0;
-    			const uint8_t p3 = nonpacket_.command23.param3;
+  				const uint8_t f0 = nonpacket_.command23.flags0;
+  				const uint8_t p3 = nonpacket_.command23.param3;
 
-    		// Quiet vu à l’IR : param3 = 0x32 (ON) / 0x30 (OFF)
-    			const bool quiet_on = (p3 == 0x32) || (p3 == 0x33);
+  				// Ancienne géné confirmée par snif : Quiet = (flags0 & 0x20)
+  				// On garde une compat’ “secours” si certains modèles utilisent encore p3=0x32/0x33.
+  				const bool quiet_on = ( (f0 & 0x20) != 0 ) || (p3 == 0x32) || (p3 == 0x33);
 
-    			ESP_LOGW(TAG, "RECV CMD23 src=%s flags0=0x%02x param3=0x%02x -> quiet=%d",
-         		nonpacket_.src.c_str(), f0, p3, (int)quiet_on);
+  				ESP_LOGW(TAG, "RECV CMD23 src=%s flags0=0x%02x param3=0x%02x -> quiet=%d",
+           					nonpacket_.src.c_str(), f0, p3, (int)quiet_on);
 
-    			target->set_altmode(nonpacket_.src, quiet_on ? 2 /* Quiet */ : 0 /* None */);
+  				target->set_altmode(nonpacket_.src, quiet_on ? 2 /* Quiet */ : 0 /* None */);
 			}
 			else if (nonpacket_.cmd == NonNasaCommand::CmdC6)
 			{
@@ -782,6 +783,7 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
