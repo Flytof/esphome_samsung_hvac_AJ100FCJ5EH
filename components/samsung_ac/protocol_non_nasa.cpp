@@ -16,6 +16,8 @@ namespace esphome
     namespace samsung_ac
 	{
     static std::optional<std::vector<uint8_t>> g_pending_cmd23;
+	static bool suppress_queue_once = false;
+
     std::list<NonNasaRequestQueueItem> nonnasa_requests;
     bool controller_registered = false;
     bool indoor_unit_awake = true;
@@ -389,8 +391,6 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
             data[9] = (uint8_t)0x21;
             data[12] = build_checksum(data);
 
-            data[9] = (uint8_t)0x21;
-
             return data;
         }
 
@@ -684,18 +684,26 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
                         ESP_LOGD(TAG, "Controller registered");
                         controller_registered = true;
                     }
-                    if (indoor_unit_awake)
-                    {
-						      if (g_pending_cmd23.has_value())
-							  	{
-        						ESP_LOGW(TAG, "SENDING pending CMD23 in C6 window");
-        						target->publish_data(*g_pending_cmd23);
-        						g_pending_cmd23.reset();
-      							}
-                        // We know the outdoor unit is awake due to this request_control message, so we only
-                        // need to check that the indoor unit is awake.
-                        send_requests(target);
-                    }
+                    if (g_pending_cmd23.has_value())
+    				{
+        				ESP_LOGW(TAG, "SENDING pending CMD23 in C6 window");
+        				target->publish_data(*g_pending_cmd23);
+        				g_pending_cmd23.reset();
+
+        				suppress_queue_once = true;   // on saute la queue pour CE poll
+        				sent_anything = true;
+    				}
+					if (!sent_anything)
+    				{
+        				if (suppress_queue_once)
+        				{
+            			ESP_LOGD(TAG, "Skipping queue on this C6 (Cmd23 was just sent previously)");
+            			suppress_queue_once = false;   // on consomme le "joker" : ne saute qu'une fois
+        				}
+        				else
+        				{
+            			send_requests(target);         // envoi normal de la file d'attente
+        				}
                 }
             }
             else if (nonpacket_.cmd == NonNasaCommand::Cmd54 && nonpacket_.dst == "d0")
@@ -766,6 +774,7 @@ std::vector<uint8_t> build_cmd23_packet(uint8_t dst, const Cmd23State &st) {
         }
     } // namespace samsung_ac
 } // namespace esphome
+
 
 
 
